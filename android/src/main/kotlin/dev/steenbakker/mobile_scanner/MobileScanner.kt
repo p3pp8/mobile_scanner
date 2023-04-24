@@ -2,9 +2,12 @@ package dev.steenbakker.mobile_scanner
 
 import android.app.Activity
 import android.graphics.Rect
+import android.graphics.SurfaceTexture
+import android.media.CamcorderProfile
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.util.Size
 import android.view.Surface
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -169,7 +172,7 @@ class MobileScanner(
 
             // Preview
             val surfaceProvider = Preview.SurfaceProvider { request ->
-                val texture = textureEntry!!.surfaceTexture()
+                val texture:SurfaceTexture = textureEntry!!.surfaceTexture()
                 texture.setDefaultBufferSize(
                     request.resolution.width,
                     request.resolution.height
@@ -189,7 +192,8 @@ class MobileScanner(
 			
 			val camProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P)
             analysisBuilder.setDefaultResolution(Size(camProfile.videoFrameWidth,
-                camProfile.videoFrameHeight))
+                camProfile.videoFrameHeight)
+            )
             
 			val analysis = analysisBuilder.build().apply { setAnalyzer(executor, captureOutput) }
 
