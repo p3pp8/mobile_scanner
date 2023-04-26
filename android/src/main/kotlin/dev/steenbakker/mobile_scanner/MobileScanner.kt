@@ -20,6 +20,8 @@ import com.google.mlkit.vision.common.InputImage
 import dev.steenbakker.mobile_scanner.objects.DetectionSpeed
 import dev.steenbakker.mobile_scanner.objects.MobileScannerStartParameters
 import io.flutter.view.TextureRegistry
+import java.lang.IllegalArgumentException
+import java.lang.RuntimeException
 import kotlin.math.roundToInt
 
 class MobileScanner(
@@ -190,7 +192,7 @@ class MobileScanner(
             val analysisBuilder = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
 			
-			val camProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P)
+            val camProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH)
             analysisBuilder.setDefaultResolution(Size(camProfile.videoFrameWidth,
                 camProfile.videoFrameHeight))
 
