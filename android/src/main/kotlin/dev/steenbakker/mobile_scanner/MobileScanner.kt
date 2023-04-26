@@ -193,6 +193,8 @@ class MobileScanner(
 			val camProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P)
             analysisBuilder.setMaxResolution(Size(camProfile.videoFrameWidth,
                 camProfile.videoFrameHeight))
+            analysisBuilder.setDefaultResolution(Size(camProfile.videoFrameWidth,
+                camProfile.videoFrameHeight))
 
 			val analysis = analysisBuilder.build().apply { setAnalyzer(executor, captureOutput) }
 
