@@ -1,5 +1,6 @@
 package dev.steenbakker.mobile_scanner
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.graphics.Rect
 import android.graphics.SurfaceTexture
@@ -20,8 +21,6 @@ import com.google.mlkit.vision.common.InputImage
 import dev.steenbakker.mobile_scanner.objects.DetectionSpeed
 import dev.steenbakker.mobile_scanner.objects.MobileScannerStartParameters
 import io.flutter.view.TextureRegistry
-import java.lang.IllegalArgumentException
-import java.lang.RuntimeException
 import kotlin.math.roundToInt
 
 class MobileScanner(
@@ -135,6 +134,7 @@ class MobileScanner(
     /**
      * Start barcode scanning by initializing the camera and barcode scanner.
      */
+    @SuppressLint("RestrictedApi")
     @ExperimentalGetImage
     fun start(
         barcodeScannerOptions: BarcodeScannerOptions?,
@@ -196,7 +196,7 @@ class MobileScanner(
             analysisBuilder.setDefaultResolution(Size(camProfile.videoFrameWidth,
                 camProfile.videoFrameHeight))
 
-			val analysis = analysisBuilder.build().apply { setAnalyzer(executor, captureOutput) }
+            val analysis = analysisBuilder.build().apply { setAnalyzer(executor, captureOutput) }
 
             camera = cameraProvider!!.bindToLifecycle(
                 activity as LifecycleOwner,
