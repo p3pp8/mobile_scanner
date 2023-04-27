@@ -191,10 +191,13 @@ class MobileScanner(
             // Build the analyzer to be passed on to MLKit
             val analysisBuilder = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-			
-            val camProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH)
-            analysisBuilder.setDefaultResolution(Size(camProfile.videoFrameWidth,
-                camProfile.videoFrameHeight))
+
+            // FIXME: Use CamcorderProfile to fix exception with Samsung AXX models.
+            try {
+                val camProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH)
+                analysisBuilder.setDefaultResolution(Size(camProfile.videoFrameWidth,
+                    camProfile.videoFrameHeight))
+            } catch (e:Exception) {}
 
             val analysis = analysisBuilder.build().apply { setAnalyzer(executor, captureOutput) }
 
