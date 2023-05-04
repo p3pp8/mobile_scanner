@@ -174,14 +174,17 @@ class MobileScanner(
 
             // Preview
             val surfaceProvider = Preview.SurfaceProvider { request ->
-                val texture:SurfaceTexture = textureEntry!!.surfaceTexture()
-                texture.setDefaultBufferSize(
-                    request.resolution.width,
-                    request.resolution.height
-                )
-
-                val surface = Surface(texture)
-                request.provideSurface(surface, executor) { }
+                val texture:SurfaceTexture? = textureEntry?.surfaceTexture()
+                if (request!=null && texture != null) {
+                    texture.setDefaultBufferSize(
+                        request.resolution.width,
+                        request.resolution.height
+                    )
+                    val surface = Surface(texture)
+                    if (surface!=null) {
+                        request.provideSurface(surface, executor) { }
+                    }
+                }
             }
 
             // Build the preview to be shown on the Flutter texture
