@@ -27,7 +27,6 @@ import android.hardware.display.DisplayManager
 import android.view.WindowManager
 import android.content.Context
 import android.os.Build
-import android.media.CamcorderProfile
 
 class MobileScanner(
     private val activity: Activity,
@@ -70,7 +69,7 @@ class MobileScanner(
         scanner.process(inputImage)
             .addOnSuccessListener { barcodes ->
                 if (detectionSpeed == DetectionSpeed.NO_DUPLICATES) {
-                    val newScannedBarcodes = barcodes.map { barcode -> barcode.rawValue }
+                    val newScannedBarcodes = barcodes.mapNotNull({ barcode -> barcode.rawValue }).sorted()
                     if (newScannedBarcodes == lastScanned) {
                         // New scanned is duplicate, returning
                         return@addOnSuccessListener
@@ -213,6 +212,7 @@ class MobileScanner(
         torchStateCallback: TorchStateCallback,
         zoomScaleStateCallback: ZoomScaleStateCallback,
         mobileScannerStartedCallback: MobileScannerStartedCallback,
+        mobileScannerErrorCallback: (exception: Exception) -> Unit,
         detectionTimeout: Long,
         cameraResolution: Size?
     ) {
@@ -221,9 +221,12 @@ class MobileScanner(
         this.returnImage = returnImage
 
         if (camera?.cameraInfo != null && preview != null && textureEntry != null) {
-            throw AlreadyStarted()
+            mobileScannerErrorCallback(AlreadyStarted())
+
+            return
         }
 
+        lastScanned = null
         scanner = if (barcodeScannerOptions != null) {
             BarcodeScanning.getClient(barcodeScannerOptions)
         } else {
@@ -235,10 +238,14 @@ class MobileScanner(
 
         cameraProviderFuture.addListener({
             cameraProvider = cameraProviderFuture.get()
+
             if (cameraProvider == null) {
-                throw CameraError()
+                mobileScannerErrorCallback(CameraError())
+
+                return@addListener
             }
-            cameraProvider!!.unbindAll()
+
+            cameraProvider?.unbindAll()
             textureEntry = textureRegistry.createSurfaceTexture()
 
             // Preview
@@ -288,47 +295,49 @@ class MobileScanner(
                 }
             }
 
-            // FIXME: Use CamcorderProfile to fix exception with Samsung AXX models.
-            try {
-                val camProfile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH)
-                analysisBuilder.setDefaultResolution(Size(camProfile.videoFrameWidth,
-                    camProfile.videoFrameHeight))
-            } catch (e:Exception) {}
-
             val analysis = analysisBuilder.build().apply { setAnalyzer(executor, captureOutput) }
 
-            camera = cameraProvider!!.bindToLifecycle(
-                activity as LifecycleOwner,
-                cameraPosition,
-                preview,
-                analysis
-            )
+            try {
+                camera = cameraProvider?.bindToLifecycle(
+                    activity as LifecycleOwner,
+                    cameraPosition,
+                    preview,
+                    analysis
+                )
+            } catch(exception: Exception) {
+                mobileScannerErrorCallback(NoCamera())
 
-            // Register the torch listener
-            camera!!.cameraInfo.torchState.observe(activity) { state ->
-                // TorchState.OFF = 0; TorchState.ON = 1
-                torchStateCallback(state)
+                return@addListener
             }
 
-            // Register the zoom scale listener
-            camera!!.cameraInfo.zoomState.observe(activity) { state ->
-                zoomScaleStateCallback(state.linearZoom.toDouble())
+            camera?.let {
+                // Register the torch listener
+                it.cameraInfo.torchState.observe(activity as LifecycleOwner) { state ->
+                    // TorchState.OFF = 0; TorchState.ON = 1
+                    torchStateCallback(state)
+                }
+
+                // Register the zoom scale listener
+                it.cameraInfo.zoomState.observe(activity) { state ->
+                    zoomScaleStateCallback(state.linearZoom.toDouble())
+                }
+
+                // Enable torch if provided
+                if (it.cameraInfo.hasFlashUnit()) {
+                    it.cameraControl.enableTorch(torch)
+                }
             }
-
-
-            // Enable torch if provided
-            camera!!.cameraControl.enableTorch(torch)
 
             val resolution = analysis.resolutionInfo!!.resolution
-            val portrait = camera!!.cameraInfo.sensorRotationDegrees % 180 == 0
             val width = resolution.width.toDouble()
             val height = resolution.height.toDouble()
+            val portrait = (camera?.cameraInfo?.sensorRotationDegrees ?: 0) % 180 == 0
 
             mobileScannerStartedCallback(
                 MobileScannerStartParameters(
                     if (portrait) width else height,
                     if (portrait) height else width,
-                    camera!!.cameraInfo.hasFlashUnit(),
+                    camera?.cameraInfo?.hasFlashUnit() ?: false,
                     textureEntry!!.id()
                 )
             )
@@ -368,9 +377,12 @@ class MobileScanner(
      */
     fun toggleTorch(enableTorch: Boolean) {
         if (camera == null) {
-            throw TorchWhenStopped()
+            return
         }
-        camera!!.cameraControl.enableTorch(enableTorch)
+
+        if (camera?.cameraInfo?.hasFlashUnit() == true) {
+            camera?.cameraControl?.enableTorch(enableTorch)
+        }
     }
 
     /**
@@ -400,9 +412,9 @@ class MobileScanner(
      * Set the zoom rate of the camera.
      */
     fun setScale(scale: Double) {
-        if (camera == null) throw ZoomWhenStopped()
         if (scale > 1.0 || scale < 0) throw ZoomNotInRange()
-        camera!!.cameraControl.setLinearZoom(scale.toFloat())
+        if (camera == null) throw ZoomWhenStopped()
+        camera?.cameraControl?.setLinearZoom(scale.toFloat())
     }
 
     /**
@@ -410,7 +422,7 @@ class MobileScanner(
      */
     fun resetScale() {
         if (camera == null) throw ZoomWhenStopped()
-        camera!!.cameraControl.setZoomRatio(1f)
+        camera?.cameraControl?.setZoomRatio(1f)
     }
 
 }

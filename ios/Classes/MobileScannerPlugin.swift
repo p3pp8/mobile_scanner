@@ -95,7 +95,7 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    /// Parses all parameters and starts the mobileScanner
+    /// Start the mobileScanner.
     private func start(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
         let torch: Bool = (call.arguments as! Dictionary<String, Any?>)["torch"] as? Bool ?? false
         let facing: Int = (call.arguments as! Dictionary<String, Any?>)["facing"] as? Int ?? 1
@@ -120,7 +120,7 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin {
         let detectionSpeed: DetectionSpeed = DetectionSpeed(rawValue: speed)!
 
         do {
-            try mobileScanner.start(barcodeScannerOptions: barcodeOptions, returnImage: returnImage, cameraPosition: position, torch: torch ? .on : .off, detectionSpeed: detectionSpeed) { parameters in
+            try mobileScanner.start(barcodeScannerOptions: barcodeOptions, returnImage: returnImage, cameraPosition: position, torch: torch, detectionSpeed: detectionSpeed) { parameters in
                 DispatchQueue.main.async {
                     result([
                         "textureId": parameters.textureId,
@@ -136,22 +136,18 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin {
             result(FlutterError(code: "MobileScanner",
                                 message: "No camera found or failed to open camera!",
                                 details: nil))
-        } catch MobileScannerError.torchError(let error) {
-            result(FlutterError(code: "MobileScanner",
-                                message: "Error occured when setting torch!",
-                                details: error))
         } catch MobileScannerError.cameraError(let error) {
             result(FlutterError(code: "MobileScanner",
                                 message: "Error occured when setting up camera!",
                                 details: error))
         } catch {
             result(FlutterError(code: "MobileScanner",
-                                message: "Unknown error occured..",
+                                message: "Unknown error occured.",
                                 details: nil))
         }
     }
 
-    /// Stops the mobileScanner and closes the texture
+    /// Stops the mobileScanner and closes the texture.
     private func stop(_ result: @escaping FlutterResult) {
         do {
             try mobileScanner.stop()
@@ -159,19 +155,17 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin {
         result(nil)
     }
 
-    /// Toggles the torch
+    /// Toggles the torch.
     private func toggleTorch(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
         do {
             try mobileScanner.toggleTorch(call.arguments as? Int == 1 ? .on : .off)
             result(nil)
         } catch {
-            result(FlutterError(code: "MobileScanner",
-                                message: "Called toggleTorch() while stopped!",
-                                details: nil))
+            result(FlutterError(code: "MobileScanner", message: error.localizedDescription, details: nil))
         }
     }
     
-    /// Toggles the zoomScale
+    /// Sets the zoomScale.
     private func setScale(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
         let scale = call.arguments as? CGFloat
         if (scale == nil) {
@@ -198,7 +192,7 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    /// Reset the zoomScale
+    /// Reset the zoomScale.
     private func resetScale(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
         do {
             try mobileScanner.resetScale()
@@ -218,7 +212,7 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    /// Toggles the torch
+    /// Updates the scan window rectangle.
     func updateScanWindow(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
         let scanWindowData: Array? = (call.arguments as? [String: Any])?["rect"] as? [CGFloat]
         MobileScannerPlugin.scanWindow = scanWindowData
@@ -240,7 +234,7 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin {
         return CGRect(x: minX, y: minY, width: width, height: height)
     }
     
-    /// Analyzes a single image
+    /// Analyzes a single image.
     private func analyzeImage(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
         let uiImage = UIImage(contentsOfFile: call.arguments as? String ?? "")
         
